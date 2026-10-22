@@ -1,74 +1,112 @@
 # Requisitos Funcionais
 
-## Base e escopo
+## Escopo e prioridades propostas
 
-Estes requisitos descrevem o comportamento esperado do Gym AI para organizar e acompanhar treinos de musculação pelo chat. As [personas do projeto](../Personas/) orientam sua evolução; objetivos, experiência, rotina e preferências devem ser tratados como dados de cada usuário, sem assumir um único perfil de uso.
+O Gym é um plugin para o ChatGPT, com invocação pretendida como **@Gym**, para planejar musculação, registrar execução, acompanhar evolução e adaptar sessões. O armazenamento inicial será o **Google Sheets**. Estes são requisitos para desenvolvimento, não funcionalidades implementadas. As [personas](../Personas/) fornecem exemplos de necessidades; seus horários, objetivos e dispositivos não são restrições gerais.
 
-O fluxo principal é: configurar o perfil → planejar a semana → consultar o treino → registrar a execução → acompanhar a evolução → ajustar os próximos treinos.
+- **P0 — primeira versão:** fluxo completo de vincular planilha, cadastrar perfil, aprovar e recuperar plano, consultar sessão, registrar e corrigir séries e recuperar dados em outra conversa. Inclui segurança, integridade, privacidade e falhas.
+- **P1 — evoluções:** automações e análises que ampliam o fluxo básico. Continuam sendo requisitos previstos, sem compromisso de entrega definido.
 
-**Prioridades propostas:** **P0** = essencial para o fluxo principal; **P1** = complemento prioritário. A classificação é uma proposta de implementação, sujeita à revisão conforme as necessidades documentadas nas personas. Os critérios abaixo são condições para aceitar a funcionalidade, não evidência de que ela já está implementada.
+Os IDs RF01–RF21 foram preservados. RF22–RF25 acrescentam integração e controle de dados. Os critérios de qualidade estão em [não funcionais](./nao_funcionais.md); as regras de armazenamento, no [contrato de dados](./contrato_dados.md). Dependências e rastreabilidade estão em [decisões e rastreabilidade](./decisoes_rastreabilidade.md).
 
 ## Perfil e planejamento
 
-| ID | Prioridade | Requisito | Critério de aceite |
+| ID | Prioridade | Requisito | Critério de aceite e erros |
 | :-- | :--: | :-- | :-- |
-| RF01 | P0 | O sistema deve cadastrar e permitir atualizar objetivos, experiência, período sem treinar quando aplicável, disponibilidade semanal, duração das sessões e limitações informadas pelo usuário. | Deve permitir registrar e atualizar os dados de cada usuário sem impor objetivo, nível de experiência, frequência ou duração de treino fixos. Campos desconhecidos devem permanecer identificados como não informados; ausência de informação sobre limitações não deve ser tratada como ausência de limitações. |
-| RF02 | P0 | O sistema deve coletar os dias e horários disponíveis, os equipamentos acessíveis e as preferências necessárias para elaborar o plano. | Antes de fechar uma agenda ou prescrever um exercício que dependa de equipamento, deve obter a informação ou apresentar uma suposição explícita e ajustável. Dias, horários e equipamentos não informados não podem ser tratados como conhecidos. |
-| RF03 | P0 | O sistema deve gerar uma rotina semanal compatível com o perfil, distribuindo as sessões e os grupos musculares ao longo dos dias disponíveis. | Deve apresentar as sessões, sua sequência, os grupos trabalhados e os dias de descanso, respeitando os dias disponíveis e a frequência acordada com o usuário. Deve considerar a experiência e eventuais pausas informadas e explicar brevemente a organização proposta. |
-| RF04 | P0 | O sistema deve gerar e permitir consultar o treino do dia, usando o plano vigente, o histórico disponível e os ajustes registrados. | A consulta deve apresentar data, foco, exercícios em ordem, séries, repetições ou faixas, carga sugerida ou orientação para defini-la, descanso e duração total estimada. Sem histórico, deve explicitar a ausência de uma carga de referência. |
-| RF05 | P0 | O sistema deve estimar a duração da sessão, considerando aquecimento, execução, intervalos e transições entre exercícios. | Cada treino deve apresentar uma estimativa compatível com o limite informado. Se não for possível acomodar a sessão planejada, deve propor uma versão reduzida e explicar o que foi priorizado. |
-| RF06 | P0 | O sistema deve adaptar o treino quando o usuário informar uma mudança de tempo disponível no próprio dia. | Ao receber um novo limite de tempo para o dia, deve recalcular a sessão para esse limite, apresentar os cortes ou substituições e preservar a duração previamente configurada para as sessões seguintes, salvo pedido contrário. |
+| RF01 | P0 | Cadastrar e atualizar objetivos, experiência, situação de prática, disponibilidade, duração e limitações declaradas. | Dado um perfil incompleto, salvar os campos conhecidos e identificar os desconhecidos, sem converter ausência de resposta em “sem limitações”. Atualizar um objetivo deve preservar o histórico e não substituir automaticamente o plano vigente. |
+| RF02 | P0 | Obter os dados mínimos para gerar um plano. | Exigir objetivo, experiência declarada, prática atual ou pausa, frequência pretendida, dias disponíveis, limite de duração por sessão, equipamentos, fuso e resposta sobre limitações (nenhuma declarada, relatadas ou prefere não informar). Horário exato é opcional sem lembretes. Se faltar um campo mínimo ou a frequência superar as sessões autorizadas nos dias disponíveis (uma por dia, salvo escolha explícita por mais), pedir esclarecimento antes de gerar. Se o usuário preferir não informar limitações, explicitar essa incerteza e não presumir ausência; aplicar RNF06 a qualquer relato posterior. |
+| RF03 | P0 | Gerar uma proposta de rotina e torná-la vigente somente após aceite explícito. | Com RF02 atendido, apresentar sessões, sequência, grupos musculares, descanso e estimativas. Uma proposta tem ID e versão, mas não substitui o plano atual. Após aceite inequívoco da versão apresentada, persistir sua ativação e sessões; informar sucesso somente após verificar a gravação. Recusa ou falha deve manter a versão vigente anterior. |
+| RF04 | P0 | Consultar sessões do plano vigente sem criar sessões ou regenerar o plano por efeito da leitura. | Duas consultas à mesma sessão devem retornar o mesmo ID, versão e prescrição, salvo alteração explicitamente aplicada entre elas. Exibir data, foco, ordem, séries, repetições, carga ou orientação para defini-la, descanso e estimativa. Aplicar as regras de “hoje” e “próximo treino” abaixo; se houver ambiguidade, pedir seleção. Sem plano, informar a ausência e oferecer RF03. |
+| RF05 | P0 | Calcular uma duração estimada reproduzível. | Exibir aquecimento, tempo estimado de execução de cada série, intervalos efetivamente contados e transições. Usar a fórmula abaixo, identificando premissas. Se o total exceder o limite, não aprovar silenciosamente a proposta: oferecer redução ou revisão da disponibilidade. Se nem a versão reduzida couber, informar a impossibilidade. Não garantir duração real. |
+| RF06 | P1 | Adaptar pontualmente a sessão a um novo limite de tempo. | Dado “só hoje tenho menos tempo”, propor cortes ou substituições com novo cálculo RF05; aplicar após aceite e manter os limites futuros. Se não couber, informar isso e oferecer cancelar ou remarcar. Depende de RF05, RF12 e RF14. |
 
 ## Execução e registro
 
-| ID | Prioridade | Requisito | Critério de aceite |
+| ID | Prioridade | Requisito | Critério de aceite e erros |
 | :-- | :--: | :-- | :-- |
-| RF07 | P0 | O sistema deve explicar a execução dos exercícios prescritos quando solicitado. | A explicação deve incluir posicionamento, movimento, músculos trabalhados e cuidados básicos, em linguagem compatível com a experiência do usuário. |
-| RF08 | P0 | O sistema deve substituir exercícios mediante indisponibilidade de equipamento, preferência ou desconforto relatado. | Deve apresentar uma alternativa, explicar sua função na sessão e atualizar a estimativa de duração. Em caso de desconforto, deve aplicar os limites de segurança de RNF06. |
-| RF09 | P0 | O sistema deve registrar os exercícios efetivamente realizados, incluindo séries, repetições e cargas com suas unidades. | Deve aceitar registros parciais ou completos pelo chat e preservar diferenças entre séries. “3 séries de 10 com 20 kg” deve gerar três séries registradas; dados ausentes não devem ser inventados. |
-| RF10 | P0 | O sistema deve registrar o feedback relevante da sessão, como esforço percebido, cansaço, sono informado, desconfortos e duração real, quando fornecidos. | O feedback deve ficar associado à sessão correspondente e disponível para os ajustes futuros. Deve ser possível registrar o treino sem preencher todos esses campos. |
-| RF11 | P0 | O sistema deve permitir consultar e corrigir registros de sessões anteriores. | O usuário deve conseguir localizar uma sessão por data e corrigir uma carga ou repetição. Se houver mais de uma sessão possível, o sistema deve esclarecer qual será alterada antes de gravar a correção. |
-| RF12 | P0 | O sistema deve diferenciar os estados planejado, parcialmente realizado, concluído, faltado e remarcado de uma sessão. | Consultar um treino ou receber um lembrete não deve marcar sua conclusão. Uma sessão parcialmente registrada deve manter a execução conhecida sem assumir que os demais exercícios foram realizados. |
+| RF07 | P0 | Explicar os exercícios prescritos quando solicitado. | Para um exercício identificado, explicar posicionamento, movimento, músculos e cuidados básicos, considerando a experiência declarada. Para nome ambíguo, identificar a variação antes de instruir. Avaliar presença dessas informações e os limites de RNF06, sem exigir texto idêntico. |
+| RF08 | P1 | Propor substituições por equipamento indisponível, preferência ou desconforto. | Considerar equipamentos, limitações e função do exercício. Apresentar alternativa e diferença de estímulo, se houver, recalcular duração e aplicar somente após aceite. Se nenhuma alternativa satisfizer essas condições, informar a ausência e oferecer retirar o exercício, rever a sessão ou interromper diante de alerta; não inventar equivalência. Esclarecer alcance pontual ou recorrente por RF14. |
+| RF09 | P0 | Registrar séries efetivamente realizadas separadamente da prescrição. | Aceitar registros parciais, cargas e repetições por série. Antes de gravar, resolver sessão, exercício/variação, quantidade de séries, unidade e convenção da carga. “3 de 10 com 20”, sem unidade ou convenção conhecida, deve gerar esclarecimento. “20 kg por halter” com contexto inequívoco deve registrar essa convenção. Campos opcionais ausentes ficam nulos; não copiar prescrição como execução. Repetição técnica da mesma operação não pode duplicar séries. |
+| RF10 | P0 | Associar feedback opcional à sessão ou série pertinente. | Aceitar esforço percebido, cansaço, sono, desconforto e duração real, se fornecidos. Sem feedback, permitir RF09; com alvo ambíguo, perguntar antes de salvar. Relatos devem informar ajustes futuros sem alterar permanentemente o plano por si só. |
+| RF11 | P0 | Consultar e corrigir registros anteriores com preservação da revisão. | Identificar sessão e série por IDs ou contexto inequívoco e apresentar valor anterior e corrigido. Uma correção confirmada deve incrementar a revisão e preservar o histórico de alteração no contrato. Se os dados mudarem durante a operação, apresentar conflito e solicitar decisão, sem sobrescrever a revisão mais recente. |
+| RF12 | P0 | Controlar estados e transições das sessões, inclusive cancelamento e remarcação. | Executar as transições definidas abaixo. Consultar não altera estado; registrar uma primeira série torna a sessão parcial; concluir exige manifestação explícita. Falta e cancelamento não devem apagar execução. Transição inválida deve ser recusada com explicação e sem mudança persistida. |
 
 ## Adaptação e evolução
 
-| ID | Prioridade | Requisito | Critério de aceite |
+| ID | Prioridade | Requisito | Critério de aceite e erros |
 | :-- | :--: | :-- | :-- |
-| RF13 | P0 | O sistema deve reorganizar a sequência de sessões após uma falta, considerando os próximos dias disponíveis e o histórico de execução. | Ao receber “faltei hoje”, deve marcar a falta, propor uma reorganização conforme a disponibilidade, a recuperação e as preferências informadas pelo usuário, mostrando o impacto na agenda. Não deve acumular automaticamente duas sessões no mesmo dia nem tratar a sessão perdida como realizada. |
-| RF14 | P0 | O sistema deve distinguir alterações para uma sessão específica de alterações recorrentes no plano. | “Só hoje” deve afetar apenas a sessão indicada; “daqui para frente” deve atualizar as sessões futuras correspondentes e preservar o histórico executado. Se o alcance estiver ambíguo, deve esclarecê-lo antes de salvar a mudança. |
-| RF15 | P0 | O sistema deve sugerir manutenção, aumento ou redução de cargas e repetições com base em registros comparáveis, esforço e feedback disponíveis. | A sugestão deve citar a sessão de referência e explicar a decisão. Sem dados suficientes ou sem conhecer os incrementos de carga disponíveis, deve explicitar a incerteza e orientar como definir a próxima tentativa, sem inventar precisão. |
-| RF16 | P0 | O sistema deve considerar cansaço, sono ruim e dificuldade de execução no ajuste do treino atual e dos próximos treinos pertinentes. | Ao receber um relato de cansaço, deve esclarecer o necessário para propor manter, reduzir ou interromper a sessão, explicar a escolha e registrar o contexto relevante. Um relato isolado não deve alterar permanentemente o plano sem indicação do usuário. |
-| RF17 | P0 | O sistema deve apresentar a evolução do usuário em um período solicitado. | Deve exibir sessões planejadas e realizadas, frequência e evolução de cargas e repetições por exercício, com datas e unidades. Comparações devem distinguir exercícios e condições diferentes e indicar lacunas; não devem concluir mudanças na composição corporal apenas a partir de cargas ou frequência. |
-| RF18 | P0 | O sistema deve reutilizar o perfil, o plano vigente e o histórico persistido nas consultas posteriores do mesmo usuário. | Em uma nova conversa autenticada, deve recuperar o próximo treino e os últimos registros pertinentes sem exigir que o usuário os digite novamente. Deve indicar quando o histórico estiver indisponível. |
+| RF13 | P1 | Propor reorganização após falta. | Após RF12 marcar uma falta, propor nova sequência usando disponibilidade, recuperação e preferências. Mostrar datas afetadas e aplicar após aceite. Não duplicar volume nem concluir a sessão perdida. A falta permanece no histórico; a reposição referencia sua origem. Na primeira versão, registro da falta, cancelamento e remarcação explícita já são cobertos por RF12. |
+| RF14 | P0 | Distinguir alterações pontuais de recorrentes e versionar a prescrição. | “Só hoje” gera revisão da prescrição apenas nos itens ainda não executados da sessão alvo; “daqui para frente” gera proposta de nova versão do plano. Perguntar quando o alcance for ambíguo. Após aceite, preservar versões e execuções anteriores; em sessão parcial, alterar somente itens pendentes, sem reescrever a prescrição associada às séries realizadas. Na ativação recorrente, reconciliar sessões futuras por ID, sem anexar cópias: preservar o ID ao mudar apenas a prescrição, usar RF12 ao mudar a data e explicitar cancelamentos. Itens já executados conservam sua revisão original. |
+| RF15 | P1 | Sugerir progressão com referências comparáveis. | Exigir ao menos uma execução anterior com repetições, carga, unidade, convenção e identificação comparável conforme regra abaixo, além de feedback sobre esforço ou dificuldade. Sem esses dados, pedir complemento ou sugerir coleta de referência, sem aumento numérico automático. Com dados, citar sessões usadas, justificar manter/aumentar/reduzir e respeitar incrementos disponíveis; sem conhecer o incremento, não fornecer aumento exato. |
+| RF16 | P0 | Considerar cansaço, sono e dificuldades relatadas nas orientações. | Diante de relato de cansaço, perguntar sobre intensidade do relato, desconfortos e sinais de alerta antes de recomendar esforço. Explicar manter, reduzir ou interromper; aplicar RNF06. Alteração de prescrição exige RF14; não registrar conclusão nem mudança recorrente somente pelo relato. A automação para reduzir uma sessão ao novo tempo depende de RF06. |
+| RF17 | P1 | Apresentar evolução, frequência e adesão em período escolhido. | Aplicar as fórmulas abaixo e mostrar numerador, denominador, datas, fuso e lacunas. Separar evolução por chave de comparabilidade; não concluir composição corporal a partir de cargas ou frequência. Se o denominador da adesão for zero, mostrar “não aplicável”, sem divisão por zero. |
+| RF18 | P0 | Recuperar perfil, plano e registros em outra conversa autenticada. | Com a mesma identidade e vínculo válido RF22, recuperar os mesmos IDs, plano vigente e séries sem exigir nova digitação. Uma identidade diferente não herda a associação. Sem acesso, aplicar RF23, sem usar a memória da conversa como confirmação do conteúdo da planilha. |
 
 ## Lembretes e comunicação
 
-| ID | Prioridade | Requisito | Critério de aceite |
+| ID | Prioridade | Requisito | Critério de aceite e erros |
 | :-- | :--: | :-- | :-- |
-| RF19 | P1 | O sistema deve permitir ativar, configurar e desativar lembretes para o celular, com antecedência definida pelo usuário em relação ao início previsto do treino. | Deve obter horário do treino, antecedência desejada, fuso e canal disponível. Deve calcular o horário do lembrete a partir dessas configurações, identificar a sessão e fornecer acesso ao treino atualizado. A ativação depende de integração de agendamento e notificações e da autorização necessária do usuário. |
-| RF20 | P1 | O sistema deve atualizar ou cancelar lembretes pendentes quando a sessão for remarcada, cancelada ou realizada antecipadamente. | Uma remarcação deve substituir o agendamento anterior sem duplicá-lo. Se a mudança ocorrer depois do horário calculado para o lembrete, deve informar que a antecedência configurada não poderá ser cumprida e oferecer aviso imediato, quando suportado. |
-| RF21 | P1 | O sistema deve permitir ajustar o tom da comunicação motivadora conforme a preferência do usuário. | Deve permitir adotar ou dispensar um tom informal de incentivo, como o estilo “Gym Bro”, sem impô-lo a todos os usuários. Deve incentivar a retomada após faltas e manter orientações claras. A cobrança não deve incluir humilhação, culpa, comentários depreciativos sobre o corpo ou incentivo a treinar com dor. |
+| RF19 | P1 | Configurar e desativar lembretes no celular. | Exigir horário exato, fuso, antecedência, canal validado e autorização. Calcular horário do aviso a partir da sessão; identificar sessão e fornecer acesso à prescrição atual. Sem integração comprovada, informar que não foi agendado. Depende de D02 e RNF12. |
+| RF20 | P1 | Reconciliar lembretes após mudança ou perda de disparo. | Remarcação substitui aviso pendente; cancelamento e conclusão antecipada o cancelam. Se o horário já passou, aplicar RNF12 e informar atraso, sem dizer que a antecedência foi cumprida. Repetir uma operação não pode criar avisos duplicados. |
+| RF21 | P1 | Ajustar o tom motivador conforme preferência. | Permitir ativar ou dispensar incentivo informal, como “Gym Bro”. Sem preferência, usar tom respeitoso e claro. Em qualquer tom, vedar humilhação, culpa, depreciação corporal e incentivo a treinar com dor. Esses limites se aplicam também em P0. |
 
-## Regras de negócio e limites
+## Integração e controle dos dados
 
-- **Plano e execução são distintos:** sugestões não devem substituir os resultados efetivamente registrados. Mudanças futuras devem preservar as sessões já executadas.
-- **Tempo é uma restrição por sessão:** a duração deve seguir a disponibilidade informada pelo usuário, ajustável a qualquer momento. A estimativa não é uma garantia de duração real.
-- **Faltas exigem replanejamento:** a reorganização deve considerar as preferências do usuário, a disponibilidade e a recuperação, sem compensação automática de volume.
-- **Progressão depende de evidências:** o nível de experiência informado não autoriza presumir cargas ou capacidade atual, inclusive após uma pausa.
-- **Horários dependem de configuração:** dias, horários, fuso, canal e antecedência dos lembretes devem ser definidos conforme a rotina e as preferências de cada usuário. A consulta ao treino deve estar disponível independentemente do recebimento de lembretes.
-- **Escopo inicial:** planejamento e acompanhamento de musculação. Dietas, diagnóstico, tratamento, estimativa de percentual de gordura e integrações com relógios ou aplicativos de saúde ficam fora deste escopo.
+| ID | Prioridade | Requisito | Critério de aceite e erros |
+| :-- | :--: | :-- | :-- |
+| RF22 | P0 | Vincular uma conta Google e selecionar ou criar a planilha de armazenamento. | Por fluxo autorizado da integração escolhida, validar identidade, leitura e escrita e o contrato antes de confirmar vínculo. Exigir seleção explícita da planilha; criar somente a pedido do usuário. Planilha existente com conteúdo incompatível não deve ser sobrescrita. Persistir associação de identidade autenticada e ID estável da planilha fora da memória do chat; não armazenar credenciais nas células. Criação e escopos efetivos dependem de D01. |
+| RF23 | P0 | Tratar problemas de acesso, estrutura e conflitos no Sheets. | Acesso revogado: solicitar nova autorização. Planilha excluída: informar indisponibilidade e oferecer selecionar/criar outra sem presumir recuperação. Se o provedor não distinguir exclusão de falta de acesso, declarar essa incerteza. Formato inválido: bloquear escritas e indicar campos/IDs afetados. Indisponibilidade: não afirmar gravação nem usar cache como dado atual. Edições manuais e conflitos seguem o contrato; nunca escolher silenciosamente a versão vencedora. |
+| RF24 | P0 | Consultar e exportar os dados do usuário. | Permitir consulta por entidade, sessão ou período e exportação de todos os dados geridos pelo Gym em JSON estruturado, incluindo IDs, unidades, versões, revisões e fuso. Conferir contagens com a leitura validada e identificar versão do formato e data da exportação. Exportação incompleta deve ser identificada como falha, sem afirmar completude. Sem autorização, negar acesso. Não exportar outras abas ou dados de terceiros fora do contrato. |
+| RF25 | P0 | Distinguir desconexão, exclusão de registros e exclusão da planilha. | Antes de operação destrutiva, apresentar alvo, alcance e efeitos e obter confirmação explícita. Desconectar remove o vínculo e as credenciais geridas pelo Gym, sem apagar células. Excluir registros remove dados e revisões selecionados, sem apagar o arquivo inteiro; preservar referências por exclusão em cascata confirmada. Apagar a planilha inteira é ação separada: só executar se a integração permitir e houver confirmação específica; caso contrário, orientar a ação pelo proprietário. Acesso revogado impede prometer exclusão; aplicar RNF10. |
 
-## Relação entre necessidades e requisitos
+## Regras verificáveis
 
-| Necessidade atendida | Requisitos relacionados |
-| :-- | :-- |
-| Planejamento compatível com objetivos, experiência e eventuais pausas | RF01, RF03, RF15 |
-| Organização dos treinos conforme a disponibilidade semanal e o tempo por sessão | RF02–RF06 |
-| Consulta ao treino do dia conforme a rotina do usuário | RF04, RF18 |
-| Registrar pesos, repetições e como se sentiu | RF09–RF12 |
-| Falta de visualização da evolução e dúvida sobre quando progredir | RF15, RF17 |
-| Faltas e mudanças pontuais ou recorrentes pelo chat | RF13, RF14 |
-| Cansaço, sono ruim e dúvidas sobre intensidade ou descanso | RF10, RF16 |
-| Recomendações que aproveitem treinos anteriores | RF04, RF15, RF18 |
-| Lembretes no celular conforme o horário e a antecedência configurados | RF19, RF20 |
-| Interação pelo ChatGPT e comunicação conforme a preferência do usuário | RF21; RNF01, RNF02 |
+### Datas e seleção da sessão
+
+- **Hoje:** data local do instante da consulta no fuso IANA do perfil. Datas são persistidas como `AAAA-MM-DD`; horários com fuso seguem o contrato. Não usar o fuso do servidor como substituto.
+- **Dia sem sessão:** informar que não há sessão prevista; consultar não cria uma. Sessões pendentes anteriores podem ser listadas separadamente, sem virar automaticamente o treino de hoje.
+- **Múltiplas sessões:** listar ID curto, horário (se informado), foco e estado e pedir seleção antes de registrar ou alterar. Um ID explícito dispensa a pergunta.
+- **Próximo treino:** primeira sessão ativa (planejada ou parcial) com data igual ou posterior a hoje, ordenada por data e horário. Sessão sem horário na mesma data de outra exige seleção, assim como horários iguais. Se não existir, informar ausência; pendências vencidas são apresentadas separadamente.
+- **Virada de dia:** não transforma automaticamente sessão planejada em falta. Perguntar ao usuário seu resultado; datas vencidas sem confirmação são pendências, não execuções nem faltas presumidas.
+
+### Duração estimada
+
+`total_segundos = aquecimento + soma(execução estimada de cada série) + soma(intervalos previstos entre séries/exercícios) + soma(transições)`.
+
+Cada parcela deve constar da prescrição em segundos, com indicação de valor informado ou estimado. Não contar descanso após a última série se a sessão já terminou; entre exercícios, registrar descanso e transição separadamente e não somar a mesma parcela duas vezes. A duração pode ser estimada diretamente por série; se derivada de repetições e cadência, registrar ambos. Arredondar para minutos somente depois da soma.
+
+**Exemplo de verificação:** 300 s de aquecimento + 6 séries de 40 s + 4 intervalos de 60 s + 1 intervalo entre exercícios de 90 s + 1 transição de 60 s = 930 s = 15,5 min. O valor deve ser reproduzível a partir das parcelas, não do texto gerado pelo modelo. Esse exemplo não fixa a duração ou a estrutura de todos os treinos.
+
+### Estados e transições
+
+| Estado de origem | Evento explícito | Estado resultante e efeito |
+| :-- | :-- | :-- |
+| Planejada | Primeira série registrada | Parcial; mantém prescrição e execução separadas. |
+| Planejada | Usuário confirma que terminou sem registrar séries | Solicitar ao menos um registro de execução antes de concluir; não inventar séries. |
+| Parcial | Usuário confirma fim | Concluída; itens não realizados continuam sem execução, mesmo que o programa tenha ficado incompleto. |
+| Planejada | Falta confirmada | Faltada; sem execução. |
+| Planejada | Cancelamento confirmado | Cancelada; guardar motivo, se fornecido. |
+| Planejada | Remarcação confirmada | Remarcada; criar uma sucessora planejada com novo ID e referência à origem, na mesma cadeia lógica. |
+| Parcial | Usuário decide encerrar | Concluída com indicação de execução incompleta; não permitir falta, cancelamento ou remarcação que ocultem séries feitas. Itens restantes podem originar outra sessão após aceite. |
+| Concluída, faltada ou cancelada | Correção explícita de estado | Exigir motivo e revisão; reabrir como planejada se não houver séries, ou parcial se houver. Não apagar execução. |
+| Remarcada | Tentativa de registrar na origem | Redirecionar à sucessora e solicitar seleção se necessário. Correção de remarcação exige resolver a cadeia inteira sem criar duas sessões ativas. |
+
+A falta e o cancelamento são distintos: falta é ausência a uma sessão que permaneceu prevista; cancelamento retira a sessão da agenda por decisão explícita. Reposição de falta cria nova cadeia com referência à sessão faltada; remarcação preserva a mesma cadeia. Toda transição é revisionada; nenhuma leitura altera estado.
+
+### Comparabilidade, frequência e adesão
+
+- **Chave de comparabilidade:** exercício canônico + variação + equipamento (incluindo máquina quando relevante) + unidade + convenção da carga (`total`, `por_halter`, `por_lado`, `peso_corporal` ou `assistencia`). Peso corporal e assistência não são cargas livres equivalentes. Unidade diferente só é comparável após conversão explícita registrada; ausência de convenção bloqueia comparação numérica. Séries de aquecimento são separadas das séries de trabalho.
+- **Frequência realizada:** número de sessões concluídas no período, pela data real de execução, acompanhado de número de dias distintos com execução (inclusive parcial). Mostrar sessões parciais separadamente; duas sessões no mesmo dia contam como duas sessões e um dia ativo.
+- **Adesão ao plano:** sessões concluídas entre as cadeias elegíveis / total de cadeias elegíveis, multiplicado por 100. Cadeias elegíveis são as cuja data prevista final está no período, incluindo concluídas, faltadas, parciais e planejadas pendentes. Canceladas são excluídas e exibidas à parte com contagem; isso deve ser mostrado para não ocultar redução do planejamento. Remarcações contam uma única vez na data da sucessora final; origens remarcadas não entram novamente. Reposição de falta não apaga a falta original. Sessões avulsas são exibidas separadamente e não entram na adesão.
+- **Reprodutibilidade:** cada relatório informa instante de corte, período inclusivo e fuso. Remarcações posteriores podem mudar relatórios futuros; a exportação do relatório deve registrar o conjunto de IDs e revisões usado. Conclusão com execução incompleta conta como comparecimento concluído, sem alegar cumprimento de todo o volume prescrito.
+
+## Limites
+
+Prescrição aprovada e execução registrada são dados distintos. Alterações preservam o histórico, exceto exclusão solicitada pelo usuário em RF25. Nenhum nível de experiência autoriza presumir carga atual. Dietas, diagnóstico, tratamento, estimativa de percentual de gordura e integrações com relógios ficam fora deste escopo. O lembrete não condiciona o acesso à consulta do treino.
+
+## Exemplos adicionais de aceite
+
+- **Seleção:** dadas duas sessões planejadas para hoje, uma consulta lista ambas; “anote 10 repetições” sem identificar sessão/exercício não grava. Escolher uma delas permite continuar sem criar outra sessão.
+- **Progressão:** 20 kg por halter e 20 kg totais são referências distintas; séries em máquinas diferentes também não são comparadas automaticamente. Mesmo com números iguais, RF15 deve indicar a incompatibilidade.
+- **Adesão:** num período com duas cadeias concluídas, uma faltada, uma parcial, uma cancelada e uma origem remarcada cuja sucessora concluída também está no período, o denominador é cinco e o numerador três: 60%. A cancelada é exibida à parte; a origem remarcada não duplica a sucessora. A frequência é três sessões concluídas, mais uma parcial indicada separadamente. Se a sucessora mudar para fora do período, sua cadeia deixa o denominador desse período no próximo relatório, com novo instante de corte.
+- **Erro de confirmação:** se RF09 gravou séries e a resposta se perdeu, a retomada consulta o mesmo ID de operação; registros completos geram confirmação do sucesso anterior, sem novas séries. Estado não determinável é informado como pendente, nunca como falha comprovada.
