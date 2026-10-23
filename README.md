@@ -1,35 +1,26 @@
 # Gym — Plugin para ChatGPT
 
-Projeto de um plugin para o ChatGPT, com invocação pretendida como **@Gym**, para ajudar a organizar treinos de musculação personalizados e acompanhar a evolução do usuário. Esta documentação descreve o comportamento esperado do produto, sem indicar que as funcionalidades já estejam implementadas.
+O **@Gym** ajuda a organizar treinos de musculação, registrar resultados e ajustar as próximas sessões com base no histórico e na rotina do usuário. O armazenamento inicial será o **Google Sheets**.
 
-## Objetivos do plugin
+## Proposta
 
-- Auxiliar na criação de treinos personalizados, considerando os objetivos, a rotina e o tempo disponível do usuário.
-- Acompanhar a evolução com base nos exercícios realizados, nas cargas, nas repetições e nos relatos de cada treino.
-- Ajustar os treinos conforme o histórico, as faltas e as mudanças de disponibilidade informadas pelo chat.
-- Registrar inicialmente os dados dos treinos no Google Sheets, com a possibilidade de utilizar um banco de dados futuramente.
+O fluxo principal é planejar a semana → consultar o treino → registrar a execução → acompanhar a evolução → ajustar os próximos treinos.
 
-## Contexto de uso
+A primeira versão deve permitir adaptar sessões ao tempo disponível, substituir exercícios, reorganizar treinos após faltas e sugerir progressão. Lembretes no celular e personalização do tom ficam para uma etapa posterior.
 
-O Gym é voltado a pessoas que buscam apoio para organizar seus treinos de musculação, acompanhar resultados e adaptar o planejamento à própria rotina.
+Objetivo, experiência, equipamentos e disponibilidade são informações de treino coletadas pelo chat; não exigem uma tela de cadastro. As [personas](docs/Personas/) orientam o produto sem fixar uma rotina para todos.
 
-A proposta é permitir que o usuário consulte o treino do dia pelo ChatGPT, registre o que realizou e solicite ajustes para uma sessão específica ou para os próximos treinos, considerando seu histórico e sua disponibilidade.
+A documentação descreve o comportamento esperado. A integração com ChatGPT e Sheets ainda precisa ser validada.
 
-As [personas do projeto](docs/Personas/) documentam os perfis, as necessidades e os cenários de uso que orientam seu desenvolvimento.
+## Documentação
 
-## Documentação e escopo proposto
-
-- [Requisitos funcionais](docs/Requisitos/funcionais.md): comportamento, critérios de aceite e regras das sessões.
-- [Requisitos não funcionais](docs/Requisitos/nao_funcionais.md): integridade, privacidade, acessibilidade e critérios de qualidade.
-- [Contrato de dados](docs/Requisitos/contrato_dados.md): estrutura proposta no Google Sheets, versões e tratamento de conflitos.
-- [Decisões e rastreabilidade](docs/Requisitos/decisoes_rastreabilidade.md): primeira versão, evoluções e pendências de integração.
-
-A primeira versão proposta prioriza conectar a planilha, cadastrar o perfil, criar e recuperar um plano aprovado, consultar sessões, registrar e corrigir séries e recuperar os dados em outra conversa. Lembretes, análises de evolução e automações adicionais ficam como evoluções. A escolha das ferramentas de integração ainda precisa ser validada; o acesso ao Sheets e o envio de notificações não são capacidades presumidas apenas pela invocação @Gym.
+- [Requisitos funcionais: o que o Gym deve fazer](docs/Requisitos/funcionais.md)
+- [Requisitos não funcionais: qualidade e limites](docs/Requisitos/nao_funcionais.md)
+- [Decisões técnicas e rastreabilidade](docs/Requisitos/decisoes_rastreabilidade.md)
+- [Dados necessários no Sheets](docs/Requisitos/contrato_dados.md)
 
 ## Objetivos pessoais
 
-Estou criando este plugin para:
-
-1. Ajudar a estruturar meus próprios treinos.
-2. Aprender a criar plugins para o ChatGPT e desenvolver minhas habilidades com inteligência artificial e automações.
+1. Estruturar meus próprios treinos.
+2. Aprender a criar plugins para o ChatGPT e desenvolver habilidades com IA e automações.
 3. Aplicar conhecimentos de Engenharia de Software.
