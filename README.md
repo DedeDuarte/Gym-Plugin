@@ -14,6 +14,7 @@ A documentação descreve o comportamento esperado. A integração com ChatGPT e
 
 ## Documentação
 
+- [Protótipo: roteiro do primeiro teste](docs/prototipo.md)
 - [Requisitos funcionais: o que o Gym deve fazer](docs/Requisitos/funcionais.md)
 - [Requisitos não funcionais: qualidade e limites](docs/Requisitos/nao_funcionais.md)
 - [Decisões técnicas e rastreabilidade](docs/Requisitos/decisoes_rastreabilidade.md)

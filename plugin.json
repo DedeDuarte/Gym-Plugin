@@ -1,0 +1,33 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "author": {
+    "email": "andredoernerduarte@gmail.com",
+    "name": "André Duarte"
+  },
+  "description": "Assistente de musculação para planejar, registrar e adaptar treinos, com fluxo de Google Sheets quando a integração estiver disponível.",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [],
+        "category": "Other",
+        "defaultPrompt": [
+          "Ajude-me a montar uma rotina semanal de musculação.",
+          "Faltei à academia. Como posso reorganizar meus treinos?",
+          "Explique um exercício e como ajustar séries, repetições e descanso."
+        ],
+        "developerName": "André Duarte",
+        "displayName": "Gym1",
+        "longDescription": "Planeja treinos, registra resultados e adapta as próximas sessões pelo histórico. A skill orienta a criação e manutenção de uma planilha com a integração Google Drive/Sheets disponível na conversa; não inclui servidor próprio. A criação, gravação e recuperação entre conversas precisam ser verificadas no teste.",
+        "shortDescription": "Seu assistente de musculação"
+      }
+    }
+  },
+  "keywords": [
+    "musculação",
+    "treino",
+    "academia",
+    "gym-ai"
+  ],
+  "name": "gym",
+  "version": "0.2.0"
+}
